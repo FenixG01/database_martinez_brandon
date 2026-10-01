@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Artefacto - Arquitectura de Datos</title>
+    <style>
+        /* Tema Catppuccin Mocha + Kitty Terminal */
+        :root {
+            --text: #cdd6f4;
+            --green: #a6e3a1;
+            --blue: #89b4fa;
+            --red: #f38ba8;
+            --yellow: #f9e2af;
+            --mauve: #cba6f7;
+            --surface: #313244;
+        }
+
+        body {
+            /* Aquí cargamos tu imagen de fondo */
+            background: url('fondo.jpg') no-repeat center center fixed;
+            background-size: cover;
+            color: var(--text);
+            font-family: 'Fira Code', 'Cascadia Code', 'Courier New', monospace;
+            padding: 40px 20px;
+            margin: 0;
+            line-height: 1.5;
+            font-size: 15px;
+            overflow-x: hidden;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            /* Efecto cristal / Transparencia tipo Hyprland */
+            background-color: rgba(30, 30, 46, 0.85);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            padding: 30px;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+        }
+
+        /* Utilidades de la terminal */
+        .prompt-user { color: var(--green); font-weight: bold; }
+        .prompt-host { color: var(--blue); font-weight: bold; }
+        .prompt-arrow { color: var(--red); font-weight: bold; }
+        
+        .cursor {
+            display: inline-block;
+            width: 10px;
+            height: 1.2em;
+            background-color: var(--text);
+            vertical-align: bottom;
+            animation: blink 1s step-end infinite;
+            margin-left: 2px;
+        }
+
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0; }
+        }
+
+        .output-block {
+            margin: 10px 0 20px 0;
+            white-space: pre-wrap;
+        }
+
+        .ascii-art {
+            color: var(--blue);
+            font-weight: bold;
+            line-height: 1.2;
+        }
+
+        .sql-box {
+            background-color: rgba(49, 50, 68, 0.7); /* Transparencia en la caja de código */
+            padding: 15px;
+            border-radius: 6px;
+            border-left: 4px solid var(--mauve);
+            font-family: monospace;
+            margin: 10px 0;
+        }
+
+        .keyword { color: var(--mauve); font-weight: bold; }
+        .string { color: var(--green); }
+        .comment { color: #a6adc8; font-style: italic; }
+
+        .pause-msg {
+            color: var(--yellow);
+            font-style: italic;
+            cursor: pointer;
+            margin: 15px 0;
+            opacity: 0.8;
+            transition: opacity 0.3s;
+        }
+        .pause-msg:hover { opacity: 1; }
+
+        #terminal-content { display: flex; flex-direction: column; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div id="terminal-content"></div>
+</div>
+
+<script>
+    const term = document.getElementById("terminal-content");
+    let globalCursor = null;
+
+    const delay = (ms) => new Promise(res => setTimeout(res, ms));
+
+    function createPromptStr() {
+        return `<span class="prompt-user">brandonmartinez</span>@<span class="prompt-host">utd_server</span> <span class="prompt-arrow">~ ❯</span> `;
+    }
+
+    async function typeText(element, text, speed = 35) {
+        for (let i = 0; i < text.length; i++) {
+            element.innerHTML += text.charAt(i);
+            await delay(speed);
+        }
+    }
+
+    async function waitForInteraction() {
+        const pauseDiv = document.createElement("div");
+        pauseDiv.className = "pause-msg";
+        pauseDiv.innerText = "[Presione ENTER o haga clic aquí para continuar...]";
+        term.appendChild(pauseDiv);
+        window.scrollTo(0, document.body.scrollHeight);
+
+        return new Promise(resolve => {
+            const handler = (e) => {
+                if (e.type === 'click' || (e.type === 'keydown' && e.key === 'Enter')) {
+                    pauseDiv.remove();
+                    document.removeEventListener('keydown', handler);
+                    pauseDiv.removeEventListener('click', handler);
+                    resolve();
+                }
+            };
+            document.addEventListener('keydown', handler);
+            pauseDiv.addEventListener('click', handler);
+        });
+    }
+
+    async function runCommand(commandText, outputHTML, interactive = false) {
+        const line = document.createElement("div");
+        line.innerHTML = createPromptStr();
+        const cmdSpan = document.createElement("span");
+        line.appendChild(cmdSpan);
+        
+        if (globalCursor) globalCursor.remove();
+        globalCursor = document.createElement("span");
+        globalCursor.className = "cursor";
+        line.appendChild(globalCursor);
+        
+        term.appendChild(line);
+        window.scrollTo(0, document.body.scrollHeight);
+
+        await delay(300);
+        await typeText(cmdSpan, commandText, 40);
+        await delay(200);
+
+        line.removeChild(globalCursor);
+        
+        if (outputHTML) {
+            const outBlock = document.createElement("div");
+            outBlock.className = "output-block";
+            outBlock.innerHTML = outputHTML;
+            term.appendChild(outBlock);
+            
+            term.appendChild(globalCursor);
+            window.scrollTo(0, document.body.scrollHeight);
+        }
+
+        if (interactive) {
+            await delay(400);
+            await waitForInteraction();
+        }
+    }
+
+    const secuencias = [
+        {
+            cmd: "neofetch",
+            out: `
+<div style="display: flex; gap: 20px; align-items: center;">
+<div class="ascii-art">
+       /\\
+      /  \\
+     /\\   \\
+    /      \\
+   /   ,,   \\
+  /   |  |   \\
+ /_-''    ''-_\\
+</div>
+<div>
+    <span class="prompt-user">brandonmartinez</span>@<span class="prompt-host">utd_server</span><br>
+    --------------------------<br>
+    <span class="prompt-host">OS:</span> Arch Linux x86_64<br>
+    <span class="prompt-host">Kernel:</span> 6.10.arch1-1<br>
+    <span class="prompt-host">Terminal:</span> kitty<br>
+    <span class="prompt-host">Shell:</span> fish<br>
+    <span class="prompt-host">DB Motor:</span> PostgreSQL 16.3<br>
+    <span class="prompt-host">Misión:</span> Artefacto Evaluación Final
+</div>
+</div>`,
+            interact: true
+        },
+        {
+            cmd: "./01_anatomia_db.sh",
+            out: `
+ <span class="ascii-art">
+   ___
+  /   \\  [DB PRINCIPAL]
+ |_____| 
+ |     | -> PK (Primary Key): Identificador único irremplazable.
+ |_____| -> FK (Foreign Key): El puente que mantiene la integridad referencial.
+ </span>
+
+<span class="prompt-arrow">[!] TIPOS DE DATOS:</span>
+No usar "INT" para todo. Un "INT" sirve para IDs, pero un "NUMERIC" es vital para cálculos de exactitud (ej. transacciones, medidas). La arquitectura real exige precisión.`,
+            interact: true
+        },
+        {
+            cmd: "python3 evaluar_normalizacion.py",
+            out: `Iniciando script de normalización en tablas...<br>
+<br>
+<span style="color:var(--yellow)">PREGUNTA 1:</span> Analizando campo 'descripcion_categoria' en tabla 'Productos'...
+¿Existe este objeto independientemente de la tabla principal? [Y/n] <span style="color:var(--green)">> Y</span>
+<span style="color:var(--blue)">[+] ACCIÓN:</span> Se recomienda mover a una tabla de relación (Catálogo) para evitar redundancia.
+
+<br>
+<span style="color:var(--yellow)">PREGUNTA 2:</span> Analizando campo 'estado_pedido'...
+¿Este dato se va a mover o actualizar constantemente? [Y/n] <span style="color:var(--green)">> Y</span>
+<span style="color:var(--blue)">[+] ACCIÓN:</span> Riesgo de cuello de botella detectado. Se recomienda enviar a tabla transaccional.`,
+            interact: true
+        },
+        {
+            cmd: "cat arquitectura_crecimiento.sql",
+            out: `La Regla de Oro: <span class="prompt-arrow">Evitar los UPDATE. Priorizar el crecimiento vertical.</span>
+Sobrescribir datos destruye el historial. Las tablas transaccionales deben añadir registros nuevos, no borrar los viejos.
+
+<div class="sql-box">
+<span class="comment">-- ❌ MAL: UPDATE DESTRUCTIVO (Se pierde el historial anterior)</span>
+<span class="keyword">UPDATE</span> inventario 
+<span class="keyword">SET</span> estado = <span class="string">'en_reparacion'</span> 
+<span class="keyword">WHERE</span> equipo_id = 405;
+
+<span class="comment">-- ✅ PROFESIONAL: CRECIMIENTO VERTICAL (Se añade un nuevo registro)</span>
+<span class="keyword">INSERT INTO</span> log_transacciones (equipo_id, estado, fecha) 
+<span class="keyword">VALUES</span> (405, <span class="string">'en_reparacion'</span>, CURRENT_TIMESTAMP);
+</div>`,
+            interact: true
+        },
+        {
+            cmd: "man event_sourcing",
+            out: `<span style="text-decoration: underline; font-weight: bold;">TEMA DE PROFUNDIZACIÓN: EVENT SOURCING (BASES DE DATOS INMUTABLES)</span>
+
+<span class="prompt-host">NOMBRE</span>
+       Event Sourcing - El arte de no borrar nunca.
+
+<span class="prompt-host">DESCRIPCIÓN</span>
+       Relacionado con la técnica de "evitar hacer updates", el Event Sourcing es una arquitectura avanzada donde en lugar de guardar el "estado actual" de un sistema, se guarda una bitácora inmutable de eventos. 
+       
+       Si necesitas saber el estado actual, sumas el historial (Ej: +100, -20 = 80).
+
+<span class="prompt-host">VENTAJAS</span>
+       1. Trazabilidad absoluta: Tienes una máquina del tiempo de tus datos.
+       2. Rendimiento (Append-Only): Escribir hacia abajo (crecimiento vertical) es infinitamente más rápido en disco que buscar un bloque, bloquearlo (lock) y sobreescribirlo.
+       3. Tolerancia a fallos en el DBMS.`,
+            interact: true
+        },
+        {
+            cmd: "exit",
+            out: `logout: Conexión cerrada por el host.`,
+            interact: false
+        }
+    ];
+
+    async function initTerminal() {
+        await delay(500);
+        for (let i = 0; i < secuencias.length; i++) {
+            await runCommand(secuencias[i].cmd, secuencias[i].out, secuencias[i].interact);
+        }
+        if (globalCursor) globalCursor.style.display = 'none';
+    }
+
+    window.onload = initTerminal;
+</script>
+
+</body>
+</html>
